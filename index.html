@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+
+        <title>texted test</title>
+
+        <link type="text/css" rel="stylesheet" href="texted.css">
+
+        <script type="text/javascript" src="texted.js"></script>
+    </head>
+
+    <body>
+        <textarea class="editor"></textarea>
+        <div class="status"></div>
+
+        <script type="text/javascript">
+            var QS = function(s) {
+                return document.querySelector(s);
+            };
+
+            var t = texted( QS('.editor'), QS('.status') );
+        </script>
+    </body>
+</html>
