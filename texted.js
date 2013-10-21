@@ -1,18 +1,25 @@
 (function(w) {
 
-    var L = function() { console.log.apply(console, arguments); };
+    var L = function() {
+        console.log.apply(console, arguments);
+    };
+
+    var repeat = function(s, n) {
+        return new Array(n + 1).join(s);
+    };
 
     w.texted = function(el, statusEl) {
 
         el.spellcheck = false;
 
-        // TODO convert tabs to spaces?
-
         var indentation = 4;
 
-        var repeat = function(s, n) {
-            return new Array(n + 1).join(s);
-        };
+        // unify line endings to unix and tabs to spaces
+        var v = el.value;
+        v = v.replace('/\r\n/', '\n');
+        v = v.replace('/\r/',   '\n');
+        v = v.replace('/\t/', repeat(' ', indentation));
+        el.value = v;
 
         var getCursor = function() {
             var v = el.value;
@@ -56,7 +63,7 @@
             }
             s += Math.min(c.x, lines[y].length);
             return s;
-        }
+        };
 
         var setCursor = function(lines, cs, ce) {
             var s = findStringPos(lines, cs);
@@ -92,6 +99,8 @@
 
         var indentChars = '{'; // >
 
+        var lines, c;
+
         el.addEventListener('keydown', function(ev) {
             //L(ev);
             var kc = ev.keyCode;
@@ -99,35 +108,66 @@
             var ct = ev.ctrlKey;
             var mt = ev.metaKey; // command in mac
             var al = ev.altKey;
+            var wi = ev.keyIdentifier = 'Win'; // windows in linux
+
+            var l;
 
             if (kc === 9) {
                 //L(sh ? 'dedent' : 'indent');
                 evPdSp(ev);
-                var lines = getLines();
-                var c = getCursor();
-                var indents = getLineIndentations(lines, c.s.y, c.e.y);
+                lines = getLines();
+                c = getCursor();
+                var dt;
 
-                for (var i = c.s.y; i <= c.e.y; ++i) {
-                    var ind = indents[i];
-                    var dt;
+                if (c.s.x === c.e.x && c.s.y === c.e.y) {
+                    // with empty selection adds/removes indent inline
+                    l = c.s.y;
                     if (sh) {
-                        ind -= indentation;
-                        if (ind < 0) { ind = 0; }
-                        dt = indents[i] - ind;
-                        lines[i] = lines[i].substring(dt);
+                        var xs = Math.max(c.s.x - indentation, 0);
+                        dt = c.s.x - xs;
+                        lines[l] = [
+                            lines[l].substring(0, xs),
+                            lines[l].substring(c.s.x)
+                        ].join('');
+                        c.s.x -= dt;
+                        c.e.x -= dt;
                     }
                     else {
-                        lines[i] = repeat(' ', indentation) + lines[i];
+                        lines[l] = [
+                            lines[l].substring(0, c.s.x),
+                            repeat(' ', indentation),
+                            lines[l].substring(c.s.x)
+                        ].join('');
+                        c.s.x += indentation;
                         c.e.x += indentation;
                     }
                 }
+                else {
+                    // with non-empty selection indents/dedents at start of lines
+                    var indents = getLineIndentations(lines, c.s.y, c.e.y);
+
+                    for (var i = c.s.y; i <= c.e.y; ++i) {
+                        var ind = indents[i];
+                        if (sh) {
+                            ind -= indentation;
+                            if (ind < 0) { ind = 0; }
+                            dt = indents[i] - ind;
+                            lines[i] = lines[i].substring(dt);
+                        }
+                        else {
+                            lines[i] = repeat(' ', indentation) + lines[i];
+                            c.e.x += indentation;
+                        }
+                    }
+                }
+
                 setLines(lines);
                 setCursor(lines, c.s, c.e);
             }
             else if (kc === 13) {
-                var lines = getLines();
-                var c = getCursor();
-                var l = c.s.y;
+                lines = getLines();
+                c = getCursor();
+                l = c.s.y;
                 var lastChar = lines[l][c.s.x-1];
                 var addIndent = indentChars.indexOf(lastChar) !== -1;
                 var text = lines[l].substring(c.s.x);
@@ -139,11 +179,11 @@
                 setLines(lines);
                 setCursor(lines, {x: indent, y: l + 1});
             }
-            else if (ct && mt && (kc === 38 || kc === 40)) {
+            else if (ct && (mt||wi) && (kc === 38 || kc === 40)) {
                 //L('move lines', kc === 38 ? 'up' : 'down');
                 evPdSp(ev);
-                var lines = getLines();
-                var c = getCursor();
+                lines = getLines();
+                c = getCursor();
                 var t;
                 if (kc === 38 && c.s.y > 0) {
                     t = lines.splice(c.s.y - 1, 1)[0];
@@ -175,10 +215,10 @@
                 var chars = v.length;
 
                 statusEl.innerHTML = [
-                      'Chars: ', chars,
-                    '; Words: ', words,
-                    '; Lines: ', lines,
-                    '; Pos: ',   c.s.y + 1, ',', c.s.x + 1
+                    '<b>cursor:</b> ', c.s.y + 1, ',', c.s.x + 1, '<br/>',
+                    '<b>chars:</b> ', chars,
+                    '; <b>words:</b> ', words,
+                    '; <b>lines:</b> ', lines
                 ].join('');
             }
         });

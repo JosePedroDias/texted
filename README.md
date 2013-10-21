@@ -10,7 +10,7 @@ So far the supported features are:
 
 * auto indent on **enter** (adding if last char was {)
 * indent / dedent with **Tab** / **Shift + Tab**
-* move lines with **Ctrl + Meta + Up** / **Down**
+* move lines with **Ctrl + Meta/Win + Up / Down**
 
 
 
